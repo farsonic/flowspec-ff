@@ -1,0 +1,147 @@
+version 1.1;
+
+ns junos = "http://xml.juniper.net/junos/*/junos";
+ns xnm = "http://xml.juniper.net/xnm/1.1/xnm";
+ns jcs = "http://xml.juniper.net/junos/commit-scripts/1.0";
+ns ext = "http://xmlsoft.org/XSLT/namespace";
+
+import "../import/junos.xsl";
+
+match / {
+ <op-script-results> {
+ 
+   var $con = jcs:open();
+  
+   var $rpcflow = {
+       <get-route-information> {
+          <table>"inetflow.0";
+       }
+     }      
+   var $output-flow = jcs:execute($con,$rpcflow); 
+   
+   var $delete-config = {
+                <edit-config> {
+                    <target> {
+                        <candidate>;
+                    }
+		<config> {                
+    		<configuration> {
+  				<firewall> {
+     				<family> {
+            			<inet> {
+                			<filter delete="delete"> {
+                    			<name>"flowspec";
+  								}
+  							}
+  						}
+  					}
+  				}
+			}
+		}	
+	}	
+	
+   var $delete = jcs:invoke($delete-config);
+   
+   for-each ($output-flow/route-table/rt/rt-destination) {
+   var $pattern = "(,)";
+   var $substrings = jcs:split($pattern, .);  	
+
+   var $config-changes = {
+                <edit-config> {
+                    <target> {
+                        <candidate>;
+                    }
+		<config> {                
+    		<configuration> {
+  				<firewall> {
+     				<family> {
+            			<inet> {
+                			<filter> {
+                    			<name>"flowspec";
+                        			<term> {
+                            			<name>"dynamic-routes";
+                            	  			<from>{
+                                    			<source-address>{
+                                        			<name>$substrings[1];
+                                        	}
+  										}
+  									}
+  								}
+  							}
+  						}
+  					}
+  				}
+			}
+		}	
+	}		  		
+  	
+   var $route-changes = jcs:invoke($config-changes);
+   
+ 
+   var $reject-config = {
+                <edit-config> {
+                    <target> {
+                        <candidate>;
+                    }
+		<config> {                
+    		<configuration> {
+  				<firewall> {
+     				<family> {
+            			<inet> {
+                			<filter> {
+                    			<name>"flowspec";
+                        			<term> {
+                            			<name>"dynamic-routes";
+                            	  			<then>{
+                                    			<reject>{
+  										}
+  									}
+  								}
+  							}
+  						}
+  					}
+  				}
+			}
+		}	
+	}
+}		 
+
+	var $permit-config = {
+                <edit-config> {
+                    <target> {
+                        <candidate>;
+                    }
+		<config> {                
+    		<configuration> {
+  				<firewall> {
+     				<family> {
+            			<inet> {
+                			<filter> {
+                    			<name>"flowspec";
+                        			<term> {
+                            			<name>"permit";
+                            	  			<then>{
+                                    			<accept>{
+  										}
+  									}
+  								}
+  							}
+  						}
+  					}
+  				}
+			}
+		}	
+	}
+}		 
+   
+   var $reject-changes = jcs:invoke($reject-config);
+   var $permit-changes = jcs:invoke($permit-config);
+   var $lock = jcs:invoke('lock');
+   var $commit = jcs:invoke('commit');
+   var $unlock = jcs:invoke('unlock');      
+  }
+ }
+}
+    
+
+ 

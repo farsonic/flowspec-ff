@@ -1,6 +1,6 @@
 # flowspec-ff
 
-Op script (that could be converted to an event scipt) to read routes from inetflow.0 and create a JUNOS firewall filter which can then be applied to an interface
+Op script (that could be converted to an event scipt) to read routes from inetflow.0 and create a JUNOS firewall filter which can then be applied to an interface. In order to get this working you need to be populating the inetflow.0 table with BGP FlowSpec routes from a suitable configured peer. Script is only (currently) reading the destination route /32 and ignoring any other attributes passed through BGP.
 
 ```
 admin@SRX320> show route table inetflow.0
